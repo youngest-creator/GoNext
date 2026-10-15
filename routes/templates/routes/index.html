@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>GoNext — Маршруты путешествий</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f4f8; margin: 0; padding: 0; color: #2d3748; }
+        header { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { margin: 0; font-size: 28px; }
+        header p { margin: 5px 0 0 0; font-size: 14px; opacity: 0.85; }
+        .auth-box a, .auth-box button { background-color: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 8px 15px; border-radius: 6px; margin-left: 10px; border: 1px solid rgba(255,255,255,0.4); cursor: pointer; font-size: 14px; }
+        .auth-box a:hover, .auth-box button:hover { background-color: rgba(255,255,255,0.35); }
+        .container { max-width: 1000px; margin: 25px auto; padding: 0 20px; }
+        .panel { background: white; padding: 22px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 25px; }
+        #map { height: 400px; width: 100%; border-radius: 10px; border: 2px solid #cbd5e0; margin-top: 10px; }
+        input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 10px; margin-top: 6px; margin-bottom: 14px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-size: 14px; background: white; }
+        .flex-row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .btn-main { background-color: #2b6cb0; color: white; border: none; padding: 12px 22px; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: bold; }
+        .btn-main:hover { background-color: #2c5282; }
+        .btn-delete { background-color: #fff5f5; color: #e53e3e; border: 1px solid #feb2b2; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
+        .btn-delete:hover { background-color: #e53e3e; color: white; }
+        .route-card { background: white; padding: 20px; border-radius: 10px; border-left: 6px solid #3182ce; box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .badge { background-color: #ebf8ff; color: #2b6cb0; padding: 4px 10px; border-radius: 15px; font-size: 13px; font-weight: bold; margin-left: 6px; }
+        .badge-green { background-color: #f0fff4; color: #2f855a; }
+        .badge-purple { background-color: #faf5ff; color: #6b46c1; }
+        .author-tag { font-size: 13px; color: #718096; margin-top: 12px; padding-top: 10px; border-top: 1px solid #edf2f7; }
+        footer { text-align: center; padding: 25px; background-color: #1a202c; color: #a0aec0; margin-top: 40px; font-size: 14px; }
+        footer b { color: white; }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>✈️ GoNext</h1>
+            <p>Сервис поиска маршрутов | Разработчик: <b>Максим Фирсов</b></p>
+        </div>
+        <div class="auth-box">
+            {% if user.is_authenticated %}
+                <span>Привет, <b>{{ user.username }}</b>!</span>
+                {% if user.is_staff %}<a href="/admin/">Админка</a>{% endif %}
+                <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                    {% csrf_token %}<button type="submit">Выйти</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">Войти</a>
+                <a href="{% url 'register' %}">Регистрация</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="panel">
+            <h3>🗺️ Карта маршрутов GoNext</h3>
+            <p style="font-size: 14px; color: #4a5568;">Кликни по маркеру для информации или в любое место на карте, чтобы выбрать координаты нового маршрута!</p>
+            <div id="map"></div>
+        </div>
+
+        <div class="panel">
+            <h3>🔍 Поиск и фильтрация</h3>
+            <form method="get" action="{% url 'index' %}">
+                <div class="flex-row">
+                    <div style="flex: 2; min-width: 240px;"><input type="text" name="q" value="{{ search_query }}" placeholder="Поиск по названию или стране..." style="margin:0;"></div>
+                    <div style="flex: 1; min-width: 180px;">
+                        <select name="transport" style="margin:0;">
+                            <option value="">Весь транспорт</option>
+                            <option value="car" {% if transport_filter == 'car' %}selected{% endif %}>🚗 Автомобиль</option>
+                            <option value="plane" {% if transport_filter == 'plane' %}selected{% endif %}>✈️ Самолёт</option>
+                            <option value="train" {% if transport_filter == 'train' %}selected{% endif %}>🚆 Поезд</option>
+                            <option value="bus" {% if transport_filter == 'bus' %}selected{% endif %}>🚌 Автобус</option>
+                            <option value="Active" {% if transport_filter == 'Active' %}selected{% endif %}>🚲 Вело/Пешком</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-main">Найти</button>
+                    {% if search_query or transport_filter or only_my %}<a href="{% url 'index' %}" style="padding:12px; color:#e53e3e; text-decoration:none; font-weight:bold;">Сбросить</a>{% endif %}
+                </div>
+                {% if user.is_authenticated %}
+                    <div style="margin-top: 12px;"><label style="cursor:pointer; font-size:14px;"><input type="checkbox" name="my" value="1" {% if only_my %}checked{% endif %} onchange="this.form.submit()"> 👤 <b>Показать только мои маршруты</b></label></div>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="panel">
+            <h3>➕ Составить новый маршрут</h3>
+            {% if user.is_authenticated %}
+                <form method="post" action="{% url 'index' %}">
+                    {% csrf_token %}
+                    <input type="text" name="title" required placeholder="Название маршрута">
+                    <input type="text" name="country_and_points" required placeholder="Страна и точки (например: Беларусь: Минск — Мир)">
+                    <div class="flex-row">
+                        <div style="flex: 1;"><label style="font-size:13px;">Дней:</label><input type="number" name="days" required min="1" value="3"></div>
+                        <div style="flex: 1;"><label style="font-size:13px;">Бюджет:</label><input type="number" name="budget" required min="0" value="500"></div>
+                        <div style="flex: 1;"><label style="font-size:13px;">Валюта:</label><select name="currency"><option value="BYN">BYN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+                        <div style="flex: 1;"><label style="font-size:13px;">Транспорт:</label><select name="transport"><option value="car">🚗 Авто</option><option value="plane">✈️ Самолёт</option><option value="train">🚆 Поезд</option><option value="bus">🚌 Автобус</option><option value="Active">🚲 Вело/Пешком</option></select></div>
+                    </div>
+                    <div class="flex-row">
+                        <div style="flex: 1;"><label style="font-size:13px;">Широта (из карты):</label><input type="text" id="latInput" name="latitude" value="53.9006" required></div>
+                        <div style="flex: 1;"><label style="font-size:13px;">Долгота (из карты):</label><input type="text" id="lngInput" name="longitude" value="27.5590" required></div>
+                    </div>
+                    <textarea name="description" rows="3" required placeholder="Описание и советы..."></textarea>
+                    <button type="submit" class="btn-main">Сохранить маршрут</button>
+                </form>
+            {% else %}
+                <p style="color:#718096;">🔒 Пожалуйста, <a href="{% url 'login' %}">войдите</a>, чтобы добавлять маршруты.</p>
+            {% endif %}
+        </div>
+
+        <h2>📋 Найдено маршрутов ({{ routes|length }})</h2>
+        {% for route in routes %}
+            <div class="route-card">
+                <div class="card-header">
+                    <h3 style="margin-top:0;">
+                        {{ route.title }} 
+                        <span class="badge">⏱️ {{ route.days }} дн.</span>
+                        <span class="badge badge-green">💰 {{ route.budget }} {{ route.currency }}</span>
+                        <span class="badge badge-purple">{{ route.get_transport_display }}</span>
+                    </h3>
+                    {% if user == route.author or user.is_staff %}
+                        <form method="post" action="{% url 'delete_route' route.id %}" onsubmit="return confirm('Удалить маршрут?');">
+                            {% csrf_token %}<button type="submit" class="btn-delete">🗑️ Удалить</button>
+                        </form>
+                    {% endif %}
+                </div>
+                <p><b>📍 Маршрут:</b> {{ route.country_and_points }}</p>
+                <p>{{ route.description }}</p>
+                <div class="author-tag">👤 Автор: <b>{{ route.author.username }}</b> | 🌐 Координаты: {{ route.latitude }}, {{ route.longitude }}</div>
+            </div>
+        {% empty %}
+            <div class="panel"><p>Маршрутов не найдено.</p></div>
+        {% endfor %}
+    </div>
+
+    <footer>Веб-приложение <b>GoNext</b> | Разработчик: <b>Максим Фирсов</b> © 2026</footer>
+
+    <script>
+        const map = L.map('map').setView([52.0, 25.0], 4);
+      L.tileLayer('https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}{r}.png', {
+    attribution: 'Wikimedia maps | OpenStreetMap contributors | GoNext by Maksim Firsov',
+    maxZoom: 19
+}).addTo(map);
+
+        const savedRoutes = [
+            {% for route in routes %}
+                {
+                    title: "{{ route.title|escapejs }}",
+                    points: "{{ route.country_and_points|escapejs }}",
+                    days: "{{ route.days }}",
+                    budget: "{{ route.budget }} {{ route.currency }}",
+                    transport: "{{ route.get_transport_display|escapejs }}",
+                    author: "{{ route.author.username|escapejs }}",
+                    lat: parseFloat("{{ route.latitude|stringformat:'f' }}".replace(',', '.')),
+                    lng: parseFloat("{{ route.longitude|stringformat:'f' }}".replace(',', '.'))
+                },
+            {% endfor %}
+        ];
+
+        savedRoutes.forEach(r => {
+            if (!isNaN(r.lat) && !isNaN(r.lng)) {
+                L.marker([r.lat, r.lng]).addTo(map).bindPopup(`<b>${r.title}</b> (${r.days} дн.)<br>📍 ${r.points}<br>💰 ${r.budget} | ${r.transport}<br>👤 ${r.author}`);
+            }
+        });
+
+        let tempMarker = null;
+        map.on('click', e => {
+            const lat = e.latlng.lat.toFixed(4);
+            const lng = e.latlng.lng.toFixed(4);
+            document.getElementById('latInput').value = lat;
+            document.getElementById('lngInput').value = lng;
+            if (tempMarker) map.removeLayer(tempMarker);
+            tempMarker = L.marker([lat, lng]).addTo(map).bindPopup(`Точка: ${lat}, ${lng}`).openPopup();
+        });
+    </script>
+</body>
+</html>

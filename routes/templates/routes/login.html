@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head><meta charset="UTF-8"><title>Вход в GoNext</title>
+<style>
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 360px; }
+    input { width: 100%; padding: 10px; margin: 8px 0 15px 0; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; }
+    button { width: 100%; background: #2b6cb0; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    button:hover { background: #2c5282; }
+</style>
+</head>
+<body>
+    <div class="card">
+        <h2>✈️ Вход в GoNext</h2>
+        <p style="font-size:13px; color:#718096;">Максим Фирсов</p>
+        <form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Войти</button></form>
+        <p style="text-align:center; margin-top:15px; font-size:14px;"><a href="{% url 'index' %}">← На главную</a></p>
+    </div>
+</body>
+</html>
