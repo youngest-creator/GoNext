@@ -1,20 +1,32 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head><meta charset="UTF-8"><title>Регистрация в GoNext</title>
-<style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 400px; }
-    input { width: 100%; padding: 10px; margin: 5px 0 12px 0; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; }
-    .helptext, ul { font-size: 11px; color: #718096; padding-left: 15px; }
-    button { width: 100%; background: #27ae60; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    button:hover { background: #219150; }
-</style>
+<head>
+    <meta charset="UTF-8"><title>Регистрация — GoNext</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif; margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px;
+            background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 60%, #0ea5e9 100%);
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(16px); padding: 34px; border-radius: 22px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3); width: 420px;
+        }
+        input { width: 100%; padding: 11px; margin: 5px 0 12px 0; border: 1.5px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; }
+        .helptext, ul { font-size: 11px; color: #64748b; padding-left: 15px; }
+        button {
+            width: 100%; background: linear-gradient(135deg, #2563eb 0%, #0284c7 100%); color: white; border: none;
+            padding: 13px; border-radius: 12px; font-weight: 700; font-size: 15px; cursor: pointer;
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+        }
+    </style>
 </head>
 <body>
     <div class="card">
-        <h2>🌍 Регистрация в GoNext</h2>
+        <h2 style="margin:0; color:#1e3a8a;">🌍 Регистрация в GoNext</h2>
+        <p style="font-size:13px; color:#64748b; margin-top:4px;">Создайте профиль путешественника</p>
         <form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Создать аккаунт</button></form>
-        <p style="text-align:center; margin-top:15px; font-size:14px;"><a href="{% url 'index' %}">← На главную</a></p>
+        <p style="text-align:center; margin-top:16px; font-size:14px;"><a href="{% url 'index' %}" style="color:#2563eb; text-decoration:none; font-weight:600;">← Вернуться на главную</a></p>
     </div>
 </body>
 </html>

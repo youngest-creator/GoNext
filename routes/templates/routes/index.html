@@ -1,175 +1,373 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <title>GoNext — Маршруты путешествий</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoNext — Интерактивный планировщик путешествий</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f4f8; margin: 0; padding: 0; color: #2d3748; }
-        header { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
-        header h1 { margin: 0; font-size: 28px; }
-        header p { margin: 5px 0 0 0; font-size: 14px; opacity: 0.85; }
-        .auth-box a, .auth-box button { background-color: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 8px 15px; border-radius: 6px; margin-left: 10px; border: 1px solid rgba(255,255,255,0.4); cursor: pointer; font-size: 14px; }
-        .auth-box a:hover, .auth-box button:hover { background-color: rgba(255,255,255,0.35); }
-        .container { max-width: 1000px; margin: 25px auto; padding: 0 20px; }
-        .panel { background: white; padding: 22px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 25px; }
-        #map { height: 400px; width: 100%; border-radius: 10px; border: 2px solid #cbd5e0; margin-top: 10px; }
-        input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 10px; margin-top: 6px; margin-bottom: 14px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-size: 14px; background: white; }
-        .flex-row { display: flex; gap: 15px; flex-wrap: wrap; }
-        .btn-main { background-color: #2b6cb0; color: white; border: none; padding: 12px 22px; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: bold; }
-        .btn-main:hover { background-color: #2c5282; }
-        .btn-delete { background-color: #fff5f5; color: #e53e3e; border: 1px solid #feb2b2; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
-        .btn-delete:hover { background-color: #e53e3e; color: white; }
-        .route-card { background: white; padding: 20px; border-radius: 10px; border-left: 6px solid #3182ce; box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .badge { background-color: #ebf8ff; color: #2b6cb0; padding: 4px 10px; border-radius: 15px; font-size: 13px; font-weight: bold; margin-left: 6px; }
-        .badge-green { background-color: #f0fff4; color: #2f855a; }
-        .badge-purple { background-color: #faf5ff; color: #6b46c1; }
-        .author-tag { font-size: 13px; color: #718096; margin-top: 12px; padding-top: 10px; border-top: 1px solid #edf2f7; }
-        footer { text-align: center; padding: 25px; background-color: #1a202c; color: #a0aec0; margin-top: 40px; font-size: 14px; }
+        :root {
+            --bg-gradient: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            --surface: rgba(255, 255, 255, 0.92);
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --primary: #2563eb;
+            --border: #cbd5e1;
+            --card-bg: rgba(255, 255, 255, 0.95);
+        }
+        [data-theme="dark"] {
+            --bg-gradient: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+            --surface: rgba(15, 23, 42, 0.88);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --border: #334155;
+            --card-bg: rgba(30, 41, 59, 0.9);
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif; margin: 0; padding: 0; color: var(--text-main);
+            background: var(--bg-gradient); background-attachment: fixed; transition: background 0.3s ease, color 0.3s ease;
+        }
+        header {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 58, 138, 0.95) 100%);
+            backdrop-filter: blur(12px); color: white; padding: 16px 35px; display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 25px rgba(0,0,0,0.25);
+        }
+        .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: white; }
+        .brand h1 { margin: 0; font-size: 26px; font-weight: 800; background: linear-gradient(90deg, #ffffff, #7dd3fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .auth-box { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .auth-box a, .auth-box button, .theme-btn {
+            background: rgba(255,255,255,0.15); color: white; padding: 8px 15px; border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.25); cursor: pointer; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s;
+        }
+        .auth-box a:hover, .auth-box button:hover, .theme-btn:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
+
+        .hero-banner { max-width: 1120px; margin: 28px auto 0 auto; padding: 0 20px; }
+        .hero-inner {
+            position: relative; border-radius: 24px; overflow: hidden; padding: 42px 45px; color: white;
+            background: linear-gradient(120deg, rgba(15, 23, 42, 0.88) 0%, rgba(29, 78, 216, 0.78) 60%, rgba(14, 165, 233, 0.7) 100%),
+            url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1400&auto=format&fit=crop&q=80') center/cover no-repeat;
+            box-shadow: 0 20px 40px rgba(30, 58, 138, 0.25); display: flex; justify-content: space-between; align-items: center; gap: 20px;
+        }
+        .hero-text h2 { margin: 0 0 10px 0; font-size: 32px; font-weight: 800; }
+        .hero-text p { margin: 0; font-size: 15px; color: #e0f2fe; max-width: 580px; line-height: 1.6; }
+
+        .decor-bar { max-width: 1120px; margin: 18px auto 0 auto; padding: 0 20px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: space-between; }
+        .decor-chip {
+            background: var(--surface); backdrop-filter: blur(10px); padding: 12px 20px; border-radius: 14px;
+            border: 1px solid var(--border); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04); flex: 1; min-width: 200px; justify-content: center; text-align: center;
+        }
+
+        .container { max-width: 1120px; margin: 25px auto; padding: 0 20px; }
+        .panel {
+            background: var(--surface); backdrop-filter: blur(16px); padding: 26px; border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid var(--border); margin-bottom: 25px;
+        }
+        #map { height: 460px; width: 100%; border-radius: 16px; border: 3px solid var(--primary); margin-top: 14px; }
+        
+        input, select, textarea {
+            width: 100%; padding: 12px 15px; margin-top: 6px; margin-bottom: 14px;
+            border: 1.5px solid var(--border); border-radius: 12px; font-size: 14px; background: var(--card-bg); color: var(--text-main);
+        }
+        .flex-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .btn-main { background: linear-gradient(135deg, #2563eb, #0284c7); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(37,99,235,0.35); }
+        .btn-map { background: linear-gradient(135deg, #eff6ff, #dbeafe); color: #1d4ed8; border: 1px solid #93c5fd; padding: 9px 16px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+        .btn-action { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-block; }
+        .btn-fav { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; padding: 8px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+        .btn-fav.active { background: linear-gradient(135deg, #e11d48, #be123c); color: white; border-color: transparent; }
+
+        .route-card {
+            background: var(--card-bg); padding: 24px; border-radius: 20px; border: 1px solid var(--border);
+            border-left: 7px solid var(--primary); box-shadow: 0 8px 24px rgba(0,0,0,0.06); margin-bottom: 24px;
+        }
+        .route-title-link { color: var(--text-main); text-decoration: none; font-size: 21px; font-weight: 800; }
+        .route-title-link:hover { color: var(--primary); }
+        .route-img { width: 100%; max-height: 280px; object-fit: cover; border-radius: 14px; margin: 14px 0; }
+        .badge { background: #e0f2fe; color: #0369a1; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-right: 6px; display: inline-block; margin-top: 6px; }
+
+        .agent-box { background: linear-gradient(135deg, rgba(37,99,235,0.07), rgba(14,165,233,0.07)); border: 1.5px dashed var(--primary); padding: 20px; border-radius: 18px; margin-bottom: 25px; }
+        .agent-answer { background: var(--card-bg); padding: 14px 18px; border-radius: 12px; margin-top: 12px; border-left: 4px solid var(--primary); font-size: 14px; line-height: 1.5; }
+
+        footer { text-align: center; padding: 32px; background: #0f172a; color: #94a3b8; margin-top: 50px; font-size: 14px; }
         footer b { color: white; }
     </style>
 </head>
 <body>
     <header>
-        <div>
-            <h1>✈️ GoNext</h1>
-            <p>Сервис поиска маршрутов | Разработчик: <b>Максим Фирсов</b></p>
-        </div>
+        <a href="{% url 'index' %}" class="brand">
+            <span style="font-size:30px;">🧭</span>
+            <div><h1>GoNext</h1><p style="margin:0; font-size:11px; color:#bae6fd;">Разработчик: Максим Фирсов</p></div>
+        </a>
         <div class="auth-box">
+            <button class="theme-btn" onclick="toggleTheme()" id="themeToggle">🌙 Темная тема</button>
+            <a href="{% url 'index' %}">🏠 Главная</a>
             {% if user.is_authenticated %}
-                <span>Привет, <b>{{ user.username }}</b>!</span>
-                {% if user.is_staff %}<a href="/admin/">Админка</a>{% endif %}
-                <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                <a href="{% url 'profile' %}">👤 Личный кабинет ({{ user.username }})</a>
+                {% if user.is_staff %}<a href="/admin/">⚙️ Админка</a>{% endif %}
+                <form action="{% url 'logout' %}" method="post" style="display:inline; margin:0;">
                     {% csrf_token %}<button type="submit">Выйти</button>
                 </form>
             {% else %}
                 <a href="{% url 'login' %}">Войти</a>
-                <a href="{% url 'register' %}">Регистрация</a>
+                <a href="{% url 'register' %}" style="background:#0ea5e9;">Регистрация</a>
             {% endif %}
         </div>
     </header>
 
+    <div class="hero-banner">
+        <div class="hero-inner">
+            <div class="hero-text">
+                <h2>Открывай мир вместе с GoNext 🌍</h2>
+                <p>Создавай многоточечные маршруты прямо на интерактивной карте, общайся с живым ИИ-агентом на любые темы, рассчитывай километраж и сохраняй лучшие направления.</p>
+            </div>
+            <div class="hero-art" style="opacity: 0.9;">
+                <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="46" stroke="white" stroke-opacity="0.3" stroke-width="2" stroke-dasharray="6 6"/>
+                    <path d="M22 68L42 36L56 58L66 44L78 68H22Z" fill="white" fill-opacity="0.85"/>
+                    <circle cx="65" cy="30" r="6" fill="#38bdf8"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="decor-bar">
+        <div class="decor-chip">⚡ <b>Авторасчет км</b> по точкам карты</div>
+        <div class="decor-chip">🤖 <b>Живой ИИ-Агент</b> без дурацких лимитов</div>
+        <div class="decor-chip">🖨️ <b>Экспорт путевых листов</b> в PDF</div>
+    </div>
+
     <div class="container">
-        <div class="panel">
-            <h3>🗺️ Карта маршрутов GoNext</h3>
-            <p style="font-size: 14px; color: #4a5568;">Кликни по маркеру для информации или в любое место на карте, чтобы выбрать координаты нового маршрута!</p>
-            <div id="map"></div>
-        </div>
-
-        <div class="panel">
-            <h3>🔍 Поиск и фильтрация</h3>
-            <form method="get" action="{% url 'index' %}">
-                <div class="flex-row">
-                    <div style="flex: 2; min-width: 240px;"><input type="text" name="q" value="{{ search_query }}" placeholder="Поиск по названию или стране..." style="margin:0;"></div>
-                    <div style="flex: 1; min-width: 180px;">
-                        <select name="transport" style="margin:0;">
-                            <option value="">Весь транспорт</option>
-                            <option value="car" {% if transport_filter == 'car' %}selected{% endif %}>🚗 Автомобиль</option>
-                            <option value="plane" {% if transport_filter == 'plane' %}selected{% endif %}>✈️ Самолёт</option>
-                            <option value="train" {% if transport_filter == 'train' %}selected{% endif %}>🚆 Поезд</option>
-                            <option value="bus" {% if transport_filter == 'bus' %}selected{% endif %}>🚌 Автобус</option>
-                            <option value="Active" {% if transport_filter == 'Active' %}selected{% endif %}>🚲 Вело/Пешком</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn-main">Найти</button>
-                    {% if search_query or transport_filter or only_my %}<a href="{% url 'index' %}" style="padding:12px; color:#e53e3e; text-decoration:none; font-weight:bold;">Сбросить</a>{% endif %}
-                </div>
-                {% if user.is_authenticated %}
-                    <div style="margin-top: 12px;"><label style="cursor:pointer; font-size:14px;"><input type="checkbox" name="my" value="1" {% if only_my %}checked{% endif %} onchange="this.form.submit()"> 👤 <b>Показать только мои маршруты</b></label></div>
-                {% endif %}
+        <!-- ЖИВОЙ ИИ-АГЕНТ -->
+        <div class="panel agent-box">
+            <h3 style="margin:0 0 6px 0; color:var(--primary); font-size:18px;">🤖 Живой ИИ-агент путешествий</h3>
+            <p style="margin:0 0 12px 0; font-size:13px; color:var(--text-muted);">Задай любой вопрос о путешествиях, странах или просто поболтай:</p>
+            <form method="post" class="flex-row">
+                {% csrf_token %}
+                <input type="text" name="agent_query" placeholder="Например: Куда лучше съездить в отпуск и какая погода?" style="margin:0; flex:1;" required>
+                <button type="submit" name="ask_agent" class="btn-main" style="padding:11px 20px;">Спросить агента</button>
             </form>
-        </div>
-
-        <div class="panel">
-            <h3>➕ Составить новый маршрут</h3>
-            {% if user.is_authenticated %}
-                <form method="post" action="{% url 'index' %}">
-                    {% csrf_token %}
-                    <input type="text" name="title" required placeholder="Название маршрута">
-                    <input type="text" name="country_and_points" required placeholder="Страна и точки (например: Беларусь: Минск — Мир)">
-                    <div class="flex-row">
-                        <div style="flex: 1;"><label style="font-size:13px;">Дней:</label><input type="number" name="days" required min="1" value="3"></div>
-                        <div style="flex: 1;"><label style="font-size:13px;">Бюджет:</label><input type="number" name="budget" required min="0" value="500"></div>
-                        <div style="flex: 1;"><label style="font-size:13px;">Валюта:</label><select name="currency"><option value="BYN">BYN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
-                        <div style="flex: 1;"><label style="font-size:13px;">Транспорт:</label><select name="transport"><option value="car">🚗 Авто</option><option value="plane">✈️ Самолёт</option><option value="train">🚆 Поезд</option><option value="bus">🚌 Автобус</option><option value="Active">🚲 Вело/Пешком</option></select></div>
-                    </div>
-                    <div class="flex-row">
-                        <div style="flex: 1;"><label style="font-size:13px;">Широта (из карты):</label><input type="text" id="latInput" name="latitude" value="53.9006" required></div>
-                        <div style="flex: 1;"><label style="font-size:13px;">Долгота (из карты):</label><input type="text" id="lngInput" name="longitude" value="27.5590" required></div>
-                    </div>
-                    <textarea name="description" rows="3" required placeholder="Описание и советы..."></textarea>
-                    <button type="submit" class="btn-main">Сохранить маршрут</button>
-                </form>
-            {% else %}
-                <p style="color:#718096;">🔒 Пожалуйста, <a href="{% url 'login' %}">войдите</a>, чтобы добавлять маршруты.</p>
+            {% if agent_answer %}
+                <div class="agent-answer"><b>Ответ ИИ:</b> {{ agent_answer }}</div>
             {% endif %}
         </div>
 
-        <h2>📋 Найдено маршрутов ({{ routes|length }})</h2>
+        <!-- КАРТА С РАЗДЕЛЬНЫМИ РЕЖИМАМИ -->
+        <div class="panel" id="mapSection">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <h3 style="margin:0; font-size:20px;">🗺️ Интерактивная карта GoNext</h3>
+                    <p style="font-size: 13px; color:var(--text-muted); margin:4px 0 0 0;" id="mapModeText">Режим: Просмотр каталога. Нажмите кнопку справа, чтобы очистить карту и рисовать свой маршрут!</p>
+                </div>
+                <div class="flex-row">
+                    <button type="button" class="btn-map" id="modeToggleBtn" onclick="toggleDrawingMode()">✏️ Создать свой маршрут</button>
+                    <button type="button" class="btn-map" onclick="showAllMarkers()" id="showAllBtn">🌍 Показать все маркеры</button>
+                    <button type="button" class="btn-fav" onclick="clearNewRoutePoints()" id="clearPtsBtn" style="display:none; background:#fef2f2; color:#dc2626; border-color:#fecaca;">🧹 Очистить мои точки (<span id="ptsCount">0</span> точ: <span id="liveDist">0</span>)</button>
+                </div>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <!-- ФОРМА СОЗДАНИЯ МАРШРУТА -->
+        <div class="panel">
+            <h3 style="margin-top:0; font-size:18px;">➕ Сохранить новый маршрут</h3>
+            {% if user.is_authenticated %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="flex-row">
+                        <div style="flex:1; min-width:240px;"><input type="text" name="title" required placeholder="Название маршрута"></div>
+                        <div style="flex:1; min-width:240px;"><input type="text" name="country_and_points" required placeholder="Точки через тире (Минск — Брест)"></div>
+                    </div>
+                    <div class="flex-row">
+                        <div style="flex:1; min-width:120px;"><label style="font-size:12px; font-weight:600;">Дней:</label><input type="number" name="days" required min="1" value="3"></div>
+                        <div style="flex:1; min-width:120px;"><label style="font-size:12px; font-weight:600;">Бюджет:</label><input type="number" name="budget" required min="0" value="450"></div>
+                        <div style="flex:1; min-width:120px;"><label style="font-size:12px; font-weight:600;">Валюта:</label><select name="currency"><option value="BYN">BYN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+                        <div style="flex:1; min-width:150px;"><label style="font-size:12px; font-weight:600;">Транспорт:</label><select name="transport"><option value="car">🚗 Авто</option><option value="plane">✈️ Самолет</option><option value="train">🚆 Поезд</option><option value="bus">🚌 Автобус</option><option value="Active">🚲 Вело</option></select></div>
+                    </div>
+                    <input type="url" name="image_url" placeholder="Ссылка на фото (URL, необязательно)">
+                    <label style="font-size:12px; font-weight:700; color:var(--primary);">📍 Точки маршрута с чистой карты:</label>
+                    <input type="text" id="waypointsInput" name="waypoints" value="[[53.9006, 27.5590]]" readonly style="font-family:monospace; background:rgba(0,0,0,0.02);">
+                    <textarea name="description" rows="3" required placeholder="Описание маршрута..."></textarea>
+                    <button type="submit" name="create_route" class="btn-main">💾 Сохранить маршрут в базу</button>
+                </form>
+            {% else %}
+                <p style="color:var(--text-muted); margin:0;">🔒 Пожалуйста, <a href="{% url 'login' %}" style="color:var(--primary); font-weight:700;">войдите</a>, чтобы сохранять маршруты.</p>
+            {% endif %}
+        </div>
+
+        <!-- КАТАЛОГ МАРШРУТОВ -->
+        <h2 style="font-weight:800; margin-bottom:18px;">📋 Каталог маршрутов ({{ routes|length }})</h2>
         {% for route in routes %}
             <div class="route-card">
-                <div class="card-header">
-                    <h3 style="margin-top:0;">
-                        {{ route.title }} 
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <a href="{% url 'route_detail' route.id %}" class="route-title-link">{{ route.title }}</a><br>
                         <span class="badge">⏱️ {{ route.days }} дн.</span>
-                        <span class="badge badge-green">💰 {{ route.budget }} {{ route.currency }}</span>
-                        <span class="badge badge-purple">{{ route.get_transport_display }}</span>
-                    </h3>
-                    {% if user == route.author or user.is_staff %}
-                        <form method="post" action="{% url 'delete_route' route.id %}" onsubmit="return confirm('Удалить маршрут?');">
-                            {% csrf_token %}<button type="submit" class="btn-delete">🗑️ Удалить</button>
-                        </form>
-                    {% endif %}
+                        <span class="badge" style="background:#f0fdf4; color:#15803d;">💰 {{ route.budget }} {{ route.currency }}</span>
+                        <span class="badge" style="background:#faf5ff; color:#6d28d9;">{{ route.get_transport_display }}</span>
+                        <span class="badge" style="background:#fff7ed; color:#c2410c;">📏 ~{{ route.distance_km }} км</span>
+                        {% if route.avg_rating %}<span class="badge" style="background:#fefce8; color:#a16207;">⭐ {{ route.avg_rating|floatformat:1 }} / 5</span>{% endif %}
+                    </div>
+                    <div class="flex-row">
+                        <button type="button" class="btn-map" onclick='drawRouteOnMap({{ route.waypoints|safe }}, "{{ route.title|escapejs }}", "{{ route.country_and_points|escapejs }}", {{ route.distance_km }})'>🗺️ На карте</button>
+                        <a href="{% url 'route_detail' route.id %}" class="btn-action">🔍 Подробнее</a>
+                        <a href="{% url 'print_route' route.id %}" target="_blank" class="btn-action">🖨️ PDF</a>
+                        {% if user.is_authenticated %}
+                            <form method="post" action="{% url 'toggle_favorite' route.id %}" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-fav {% if user in route.favorites.all %}active{% endif %}">
+                                    {% if user in route.favorites.all %}❤️ ({{ route.favorites.count }}){% else %}🤍 ({{ route.favorites.count }}){% endif %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
                 </div>
-                <p><b>📍 Маршрут:</b> {{ route.country_and_points }}</p>
-                <p>{{ route.description }}</p>
-                <div class="author-tag">👤 Автор: <b>{{ route.author.username }}</b> | 🌐 Координаты: {{ route.latitude }}, {{ route.longitude }}</div>
+                {% if route.image_url %}
+                    <img src="{{ route.image_url }}" alt="{{ route.title }}" class="route-img" onerror="this.style.display='none'">
+                {% endif %}
+                <p style="margin:12px 0 6px 0;"><b>📍 Маршрут:</b> <span style="color:var(--primary); font-weight:600;">{{ route.country_and_points }}</span></p>
+                <p style="margin:6px 0; color:var(--text-muted); line-height:1.5;">{{ route.description|truncatechars:180 }}</p>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:10px;">👤 Автор: <b>{{ route.author.username }}</b></div>
             </div>
         {% empty %}
             <div class="panel"><p>Маршрутов не найдено.</p></div>
         {% endfor %}
     </div>
 
-    <footer>Веб-приложение <b>GoNext</b> | Разработчик: <b>Максим Фирсов</b> © 2026</footer>
+    <footer>
+        Веб-приложение <b>GoNext</b> — Интерактивный сервис путешествий<br>
+        Курсовой проект | Разработчик: <b>Максим Фирсов</b> © 2026
+    </footer>
 
     <script>
-        const map = L.map('map').setView([52.0, 25.0], 4);
-      L.tileLayer('https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}{r}.png', {
-    attribution: 'Wikimedia maps | OpenStreetMap contributors | GoNext by Maksim Firsov',
-    maxZoom: 19
-}).addTo(map);
+        function toggleTheme() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeToggle');
+            if (html.getAttribute('data-theme') === 'light') {
+                html.setAttribute('data-theme', 'dark');
+                btn.innerText = '☀️ Светлая тема';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light');
+                btn.innerText = '🌙 Темная тема';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+        if (localStorage.getItem('theme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.getElementById('themeToggle').innerText = '☀️ Светлая тема';
+        }
+
+        const map = L.map('map').setView([51.0, 22.0], 4);
+        L.tileLayer('https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+
+        const allMarkersLayer = L.layerGroup().addTo(map);
+        const activeRouteLayer = L.layerGroup().addTo(map);
+        const newRouteLayer = L.layerGroup().addTo(map);
+
+        let isDrawingMode = false;
+        function toggleDrawingMode() {
+            isDrawingMode = !isDrawingMode;
+            const btn = document.getElementById('modeToggleBtn');
+            const txt = document.getElementById('mapModeText');
+            const clearBtn = document.getElementById('clearPtsBtn');
+            const showAllBtn = document.getElementById('showAllBtn');
+
+            if (isDrawingMode) {
+                // РЕЖИМ СОЗДАНИЯ: полностью очищаем карту от маркеров каталога
+                allMarkersLayer.clearLayers();
+                activeRouteLayer.clearLayers();
+
+                btn.style.background = '#2563eb'; btn.style.color = 'white';
+                btn.innerText = '👁️ Вернуться к каталогу';
+                txt.innerText = 'Режим: РИСОВАНИЕ МАРШРУТА. Карта пуста. Кликайте, чтобы ставить свои точки!';
+                clearBtn.style.display = 'inline-block';
+                showAllBtn.style.display = 'none';
+            } else {
+                // РЕЖИМ ПРОСМОТРА: показываем маркеры каталога обратно
+                btn.style.background = '#dbeafe'; btn.style.color = '#1d4ed8';
+                btn.innerText = '✏️ Создать свой маршрут';
+                txt.innerText = 'Режим: Просмотр каталога маршрутов.';
+                clearBtn.style.display = 'none';
+                showAllBtn.style.display = 'inline-block';
+                showAllMarkers();
+            }
+        }
+
+        function calcDistanceJS(pts) {
+            if (!pts || pts.length < 2) return 0;
+            const R = 6371; let total = 0;
+            for (let i = 0; i < pts.length - 1; i++) {
+                const lat1 = pts[i][0]*Math.PI/180, lon1 = pts[i][1]*Math.PI/180;
+                const lat2 = pts[i+1][0]*Math.PI/180, lon2 = pts[i+1][1]*Math.PI/180;
+                const dLat = lat2-lat1, dLon = lon2-lon1;
+                const a = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+                total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            }
+            return Math.round(total);
+        }
 
         const savedRoutes = [
             {% for route in routes %}
-                {
-                    title: "{{ route.title|escapejs }}",
-                    points: "{{ route.country_and_points|escapejs }}",
-                    days: "{{ route.days }}",
-                    budget: "{{ route.budget }} {{ route.currency }}",
-                    transport: "{{ route.get_transport_display|escapejs }}",
-                    author: "{{ route.author.username|escapejs }}",
-                    lat: parseFloat("{{ route.latitude|stringformat:'f' }}".replace(',', '.')),
-                    lng: parseFloat("{{ route.longitude|stringformat:'f' }}".replace(',', '.'))
-                },
+                { title: "{{ route.title|escapejs }}", points: "{{ route.country_and_points|escapejs }}", days: "{{ route.days }}", dist: "{{ route.distance_km }}", lat: parseFloat("{{ route.latitude|stringformat:'f' }}".replace(',', '.')), lng: parseFloat("{{ route.longitude|stringformat:'f' }}".replace(',', '.')) },
             {% endfor %}
         ];
 
-        savedRoutes.forEach(r => {
-            if (!isNaN(r.lat) && !isNaN(r.lng)) {
-                L.marker([r.lat, r.lng]).addTo(map).bindPopup(`<b>${r.title}</b> (${r.days} дн.)<br>📍 ${r.points}<br>💰 ${r.budget} | ${r.transport}<br>👤 ${r.author}`);
-            }
-        });
+        function showAllMarkers() {
+            if (isDrawingMode) return; // В режиме рисования карта должна быть пустой
+            activeRouteLayer.clearLayers(); allMarkersLayer.clearLayers();
+            const bounds = [];
+            savedRoutes.forEach(r => {
+                if (!isNaN(r.lat) && !isNaN(r.lng)) {
+                    L.marker([r.lat, r.lng]).addTo(allMarkersLayer).bindPopup(`<b>${r.title}</b><br>📏 ~${r.dist} км`);
+                    bounds.push([r.lat, r.lng]);
+                }
+            });
+            if (bounds.length > 0) map.fitBounds(bounds, { padding: [30,30], maxZoom: 6 });
+        }
+        showAllMarkers();
 
-        let tempMarker = null;
+        function drawRouteOnMap(waypoints, title, subtitle, distKm) {
+            if (isDrawingMode) return;
+            document.getElementById('mapSection').scrollIntoView({ behavior: 'smooth' });
+            allMarkersLayer.clearLayers(); activeRouteLayer.clearLayers();
+            if (!waypoints || waypoints.length === 0) return;
+            const latlngs = [];
+            waypoints.forEach((pt, idx) => {
+                const lat = parseFloat(pt[0]), lng = parseFloat(pt[1]);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    latlngs.push([lat, lng]);
+                    L.marker([lat, lng]).addTo(activeRouteLayer).bindPopup(`<b>Точка #${idx+1}: ${title}</b><br>📏 ~${distKm} км`).openPopup();
+                }
+            });
+            if (latlngs.length > 1) {
+                L.polyline(latlngs, { color: '#2563eb', weight: 5, dashArray: '8, 6' }).addTo(activeRouteLayer);
+                map.fitBounds(latlngs, { padding: [50,50] });
+            } else if (latlngs.length === 1) { map.setView(latlngs[0], 10); }
+        }
+
+        let newPoints = [];
+        function clearNewRoutePoints() {
+            newPoints = []; newRouteLayer.clearLayers();
+            document.getElementById('waypointsInput').value = '[[53.9006, 27.5590]]';
+            document.getElementById('ptsCount').innerText = '0';
+            document.getElementById('liveDist').innerText = '0';
+        }
+
         map.on('click', e => {
-            const lat = e.latlng.lat.toFixed(4);
-            const lng = e.latlng.lng.toFixed(4);
-            document.getElementById('latInput').value = lat;
-            document.getElementById('lngInput').value = lng;
-            if (tempMarker) map.removeLayer(tempMarker);
-            tempMarker = L.marker([lat, lng]).addTo(map).bindPopup(`Точка: ${lat}, ${lng}`).openPopup();
+            if (!isDrawingMode) return; // Кликать можно только в режиме создания маршрута
+            const lat = parseFloat(e.latlng.lat.toFixed(4)), lng = parseFloat(e.latlng.lng.toFixed(4));
+            newPoints.push([lat, lng]);
+            const dist = calcDistanceJS(newPoints);
+            document.getElementById('waypointsInput').value = JSON.stringify(newPoints);
+            document.getElementById('ptsCount').innerText = newPoints.length;
+            document.getElementById('liveDist').innerText = dist + ' км';
+            newRouteLayer.clearLayers();
+            newPoints.forEach((p, i) => { L.marker(p).addTo(newRouteLayer).bindPopup(`Точка #${i+1}`).openPopup(); });
+            if (newPoints.length > 1) { L.polyline(newPoints, { color: '#e11d48', weight: 4 }).addTo(newRouteLayer); }
         });
     </script>
 </body>

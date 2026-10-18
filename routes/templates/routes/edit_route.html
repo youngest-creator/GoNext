@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Редактировать маршрут — GoNext</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); margin: 0; padding: 20px; color: #0f172a; }
+        .container { max-width: 820px; margin: 20px auto; background: rgba(255,255,255,0.95); padding: 30px; border-radius: 20px; box-shadow: 0 15px 35px rgba(15, 23, 42, 0.1); }
+        input, select, textarea { width: 100%; padding: 11px 14px; margin: 6px 0 16px 0; border: 1.5px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; font-family: inherit; }
+        #map { height: 340px; width: 100%; border-radius: 14px; margin-bottom: 12px; border: 2px solid #93c5fd; }
+        .btn-main { background: linear-gradient(135deg, #2563eb 0%, #0284c7 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+        .btn-clear { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 style="margin-top:0; color:#1e3a8a;">✏️ Редактирование маршрута: {{ route.title }}</h2>
+        <form method="post">
+            {% csrf_token %}
+            <label style="font-weight:600; font-size:13px;">Название маршрута:</label>
+            <input type="text" name="title" value="{{ route.title }}" required>
+            
+            <label style="font-weight:600; font-size:13px;">Страна и точки маршрута:</label>
+            <input type="text" name="country_and_points" value="{{ route.country_and_points }}" required>
+            
+            <div style="display:flex; gap:12px;">
+                <div style="flex:1;"><label style="font-weight:600; font-size:13px;">Дней:</label><input type="number" name="days" value="{{ route.days }}" required></div>
+                <div style="flex:1;"><label style="font-weight:600; font-size:13px;">Бюджет:</label><input type="number" name="budget" value="{{ route.budget }}" required></div>
+                <div style="flex:1;"><label style="font-weight:600; font-size:13px;">Валюта:</label>
+                    <select name="currency">
+                        <option value="BYN" {% if route.currency == 'BYN' %}selected{% endif %}>BYN</option>
+                        <option value="USD" {% if route.currency == 'USD' %}selected{% endif %}>USD</option>
+                        <option value="EUR" {% if route.currency == 'EUR' %}selected{% endif %}>EUR</option>
+                    </select>
+                </div>
+                <div style="flex:1;"><label style="font-weight:600; font-size:13px;">Транспорт:</label>
+                    <select name="transport">
+                        <option value="car" {% if route.transport == 'car' %}selected{% endif %}>🚗 Авто</option>
+                        <option value="plane" {% if route.transport == 'plane' %}selected{% endif %}>✈️ Самолёт</option>
+                        <option value="train" {% if route.transport == 'train' %}selected{% endif %}>🚆 Поезд</option>
+                        <option value="bus" {% if route.transport == 'bus' %}selected{% endif %}>🚌 Автобус</option>
+                        <option value="Active" {% if route.transport == 'Active' %}selected{% endif %}>🚲 Вело/Пешком</option>
+                    </select>
+                </div>
+            </div>
+
+            <label style="font-weight:600; font-size:13px;">Ссылка на фото (URL):</label>
+            <input type="url" name="image_url" value="{{ route.image_url|default:'' }}">
+
+            <label style="font-weight:600; font-size:13px;">Точки маршрута на карте (кликни по карте для добавления):</label><br>
+            <button type="button" class="btn-clear" onclick="clearPoints()">🧹 Очистить точки и нарисовать заново</button>
+            <div id="map"></div>
+            <input type="text" id="waypointsInput" name="waypoints" value="{{ route.waypoints }}" readonly style="background:#eff6ff;">
+
+            <label style="font-weight:600; font-size:13px;">Описание:</label>
+            <textarea name="description" rows="4" required>{{ route.description }}</textarea>
+
+            <button type="submit" class="btn-main">💾 Сохранить изменения</button>
+            <a href="{% url 'profile' %}" style="margin-left:15px; color:#475569; text-decoration:none; font-weight:600;">Отмена</a>
+        </form>
+    </div>
+
+    <script>
+        const map = L.map('map').setView([53.9, 27.5], 5);
+        L.tileLayer('https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}{r}.png').addTo(map);
+        const layer = L.layerGroup().addTo(map);
+        let pts = {{ route.waypoints|default:"[]"|safe }};
+
+        function renderPts() {
+            layer.clearLayers();
+            pts.forEach((p, i) => L.marker(p).addTo(layer).bindPopup(`Точка #${i+1}`));
+            if (pts.length > 1) {
+                L.polyline(pts, {color: '#2563eb', weight: 4}).addTo(layer);
+                map.fitBounds(pts, {padding: [30,30]});
+            } else if (pts.length === 1) {
+                map.setView(pts[0], 8);
+            }
+            document.getElementById('waypointsInput').value = JSON.stringify(pts);
+        }
+        renderPts();
+
+        function clearPoints() { pts = []; renderPts(); }
+        map.on('click', e => {
+            pts.push([parseFloat(e.latlng.lat.toFixed(4)), parseFloat(e.latlng.lng.toFixed(4))]);
+            renderPts();
+        });
+    </script>
+</body>
+</html>
